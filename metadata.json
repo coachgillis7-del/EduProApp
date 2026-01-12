@@ -1,0 +1,8 @@
+{
+  "name": "EduPro T-TESS Navigator",
+  "description": "A comprehensive platform for Texas educators to plan, analyze, and receive coaching on lesson delivery using the T-TESS framework.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
