@@ -1,146 +1,158 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import { provideCoaching } from '../services/geminiService';
+import FileUpload from '../components/FileUpload';
+import { provideCoaching, refineLessonWithCoaching } from '../services/geminiService';
+import { saveHistoryEntry, getLessonBank, updateLessonInBank, getAssessments, getAccommodations } from '../services/storageService';
+import { StudentRecord, StoredLesson, Assessment, SpedAccommodation } from '../types';
 import { 
   LightBulbIcon, 
   ChatBubbleBottomCenterTextIcon,
   PlusIcon,
-  XMarkIcon
+  UserIcon,
+  PhotoIcon,
+  ClipboardDocumentListIcon,
+  SparklesIcon,
+  UsersIcon,
+  ArrowDownTrayIcon,
+  TrashIcon,
+  ArrowPathRoundedSquareIcon,
+  LinkIcon,
+  TableCellsIcon,
+  NoSymbolIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
+const ROSTER_KEY = 'edupro_student_roster';
+
 const CoachingPage: React.FC = () => {
-  const [scores, setScores] = useState<number[]>([85, 92, 78]);
+  const [students, setStudents] = useState<StudentRecord[]>([]);
   const [reflection, setReflection] = useState('');
+  const [behaviorNotes, setBehaviorNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refining, setRefining] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<{ base64: string, type: string } | null>(null);
+  const [lessonBank, setLessonBank] = useState<StoredLesson[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [accommodations, setAccommodations] = useState<SpedAccommodation[]>([]);
+  const [selectedLessonId, setSelectedLessonId] = useState('');
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+  
+  useEffect(() => {
+    setLessonBank(getLessonBank());
+    setAssessments(getAssessments());
+    setAccommodations(getAccommodations());
+    const savedRoster = localStorage.getItem(ROSTER_KEY);
+    if (savedRoster) {
+      const names = JSON.parse(savedRoster) as string[];
+      setStudents(names.map(name => ({ name, score: 0 })));
+    } else {
+      setStudents([{ name: 'Student 1', score: 0 }]);
+    }
+  }, []);
 
-  const handleAddScore = () => {
-    setScores([...scores, 0]);
-  };
-
-  const handleScoreChange = (index: number, val: string) => {
-    const num = Math.min(100, Math.max(0, parseInt(val) || 0));
-    const newScores = [...scores];
-    newScores[index] = num;
-    setScores(newScores);
-  };
-
-  const removeScore = (index: number) => {
-    setScores(scores.filter((_, i) => i !== index));
+  const handleImportAssessment = () => {
+    const assessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (assessment) {
+      setStudents([...assessment.scores]);
+      setReflection(prev => `${prev}\n\nAssessment Link: ${assessment.title} (${assessment.average.toFixed(1)}%)`);
+      if (assessment.behaviorNotes) {
+        setBehaviorNotes(prev => `${prev}\nPrevious Observations: ${assessment.behaviorNotes}`);
+      }
+    }
   };
 
   const handleSubmit = async () => {
-    if (!reflection.trim()) {
-      alert("Please provide a reflection on the lesson.");
-      return;
-    }
+    if (!reflection.trim() && !behaviorNotes.trim()) { alert("Please provide details."); return; }
     setLoading(true);
     setResult(null);
     try {
-      const coachingAdvice = await provideCoaching(scores, reflection);
+      const accContext = accommodations.map(a => `${a.studentName}: ${a.accommodations}`).join('\n');
+      const coachingAdvice = await provideCoaching(students, reflection, evidence?.base64, evidence?.type, behaviorNotes, accContext);
       setResult(coachingAdvice || "No advice found.");
-    } catch (error) {
-      console.error(error);
-      alert("Failed to get coaching advice.");
-    } finally {
-      setLoading(false);
-    }
+      const avg = students.reduce((acc, curr) => acc + curr.score, 0) / (students.length || 1);
+      saveHistoryEntry({ type: 'coaching', metric: avg, label: `Growth Review: ${new Date().toLocaleDateString()}`, details: behaviorNotes });
+    } catch (error) { alert("Failed to get coaching."); } finally { setLoading(false); }
+  };
+
+  const handleRefinePlan = async () => {
+    if (!selectedLessonId || !result) return;
+    const lesson = lessonBank.find(l => l.id === selectedLessonId);
+    if (!lesson) return;
+    setRefining(true);
+    try {
+      const refinedContent = await refineLessonWithCoaching(lesson.content, result);
+      updateLessonInBank(selectedLessonId, { content: refinedContent, status: 'revised' });
+      alert("Lesson Plan Revised with Behavioral Success Pathway!");
+    } catch (error) { alert("Refinement failed."); } finally { setRefining(false); }
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
-      <header className="mb-10">
-        <h2 className="text-3xl font-bold text-slate-900">Reflective Coaching</h2>
-        <p className="text-slate-500 mt-2">
-          Connect student data with your <span className="font-semibold text-indigo-600">Fundamental 5</span> and <span className="font-semibold text-indigo-600">PAX GBG</span> implementation.
-        </p>
+    <div className="animate-in fade-in duration-500 pb-20">
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900">Elite Action Planner</h2>
+          <p className="text-slate-500 mt-2">Solving Tier 2/3 behavioral impediments with <span className="font-bold text-rose-600">targeted interventions</span>.</p>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        {/* Input Form */}
-        <div className="space-y-6 bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-4">Student Quiz Scores (0-100)</label>
-            <div className="flex flex-wrap gap-3 mb-4">
-              {scores.map((score, idx) => (
-                <div key={idx} className="relative group">
-                  <input 
-                    type="number"
-                    value={score}
-                    onChange={(e) => handleScoreChange(idx, e.target.value)}
-                    className="w-16 h-10 text-center border rounded-lg focus:ring-2 focus:ring-indigo-500 border-slate-300"
-                  />
-                  <button 
-                    onClick={() => removeScore(idx)}
-                    className="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <XMarkIcon className="w-3 h-3" />
-                  </button>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                <h3 className="text-[10px] font-black text-indigo-900 mb-2 flex items-center gap-2 uppercase tracking-widest"><LinkIcon className="w-4 h-4" /> Link Lesson</h3>
+                <select value={selectedLessonId} onChange={(e) => setSelectedLessonId(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-xs bg-white">
+                  <option value="">-- No linked plan --</option>
+                  {lessonBank.map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.focus}</option>)}
+                </select>
+             </div>
+             <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100">
+                <h3 className="text-[10px] font-black text-emerald-900 mb-2 flex items-center gap-2 uppercase tracking-widest"><TableCellsIcon className="w-4 h-4" /> Link Assessment</h3>
+                <div className="flex gap-2">
+                  <select value={selectedAssessmentId} onChange={(e) => setSelectedAssessmentId(e.target.value)} className="flex-1 px-3 py-1.5 border rounded-lg text-xs bg-white">
+                    <option value="">-- No assessment --</option>
+                    {assessments.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}
+                  </select>
+                  <button onClick={handleImportAssessment} className="p-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"><ArrowDownTrayIcon className="w-4 h-4" /></button>
                 </div>
-              ))}
-              <button 
-                onClick={handleAddScore}
-                className="w-10 h-10 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500"
-              >
-                <PlusIcon className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center text-xs font-medium text-slate-500">
-              <span>Class Sample Size: {scores.length}</span>
-              <span>Average: {(scores.reduce((a, b) => a + b, 0) / (scores.length || 1)).toFixed(1)}%</span>
-            </div>
+             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Teacher Reflection</label>
-            <textarea 
-              value={reflection}
-              onChange={(e) => setReflection(e.target.value)}
-              placeholder="Reflect on your FSGPT usage, Power Zone time, and PAX kernels. How did these choices impact student success?"
-              className="w-full h-40 p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 border-slate-300 resize-none text-sm"
-            />
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><NoSymbolIcon className="w-5 h-5 text-rose-500" /> Behavioral Documentation</h3>
+            <textarea value={behaviorNotes} onChange={(e) => setBehaviorNotes(e.target.value)} placeholder="Document TIER 2/3 impediments (e.g., 'Student X requires sensory break but refused today', 'Frequent disruptions during group work')..." className="w-full h-36 p-4 border rounded-xl focus:ring-2 focus:ring-rose-500 border-slate-200 resize-none text-sm bg-rose-50/10" />
+            <p className="text-[10px] text-slate-400 mt-2 font-medium">Documenting behavior triggers AI-driven PAX and behavioral success pathways.</p>
           </div>
 
-          <button 
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <ChatBubbleBottomCenterTextIcon className="w-5 h-5" />
-                Analyze Performance
-              </>
-            )}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><ChatBubbleBottomCenterTextIcon className="w-5 h-5 text-indigo-600" /> Instructional Reflection</h3>
+            <textarea value={reflection} onChange={(e) => setReflection(e.target.value)} placeholder="Focus on teacher moves and student cognitive lift..." className="w-full h-32 p-4 border rounded-xl focus:ring-2 focus:ring-indigo-500 border-slate-200 resize-none text-sm bg-slate-50/20" />
+          </div>
+
+          <button onClick={handleSubmit} disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-xl shadow-indigo-100/50 group">
+            {loading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><SparklesIcon className="w-5 h-5 group-hover:scale-110 transition-transform" /> Solve Gaps & Generate Action Plan</>}
           </button>
         </div>
 
-        {/* Results / Empty State */}
-        <div className="space-y-6">
+        <div className="space-y-6 h-full sticky top-8">
           {!result && !loading && (
-            <div className="bg-indigo-50 p-10 rounded-2xl border border-indigo-100 text-center flex flex-col items-center">
-              <LightBulbIcon className="w-12 h-12 text-indigo-400 mb-4" />
-              <h3 className="text-xl font-bold text-indigo-900">Instructional Insight</h3>
-              <p className="text-indigo-700 text-sm mt-2">
-                Gemini will look for ties between your scores and Fundamental 5 framework application.
-              </p>
-            </div>
-          )}
-
-          {loading && (
-            <div className="animate-pulse space-y-4">
-              <div className="h-6 bg-slate-200 rounded w-1/2"></div>
-              <div className="h-40 bg-slate-200 rounded"></div>
-              <div className="h-20 bg-slate-200 rounded"></div>
+            <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center flex flex-col items-center h-full justify-center min-h-[400px]">
+              <div className="bg-rose-50 p-4 rounded-2xl mb-6"><NoSymbolIcon className="w-12 h-12 text-rose-500" /></div>
+              <h3 className="text-xl font-bold text-slate-800">Intervention Engine</h3>
+              <p className="text-slate-500 text-sm mt-4 max-w-sm">Combining behavioral data with <span className="font-bold">IEP fidelity checks</span> to ensure every student is successful.</p>
             </div>
           )}
 
           {result && (
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 animate-in slide-in-from-right duration-500">
-              <MarkdownRenderer content={result} />
+            <div className="space-y-6 animate-in slide-in-from-right duration-500">
+              {selectedLessonId && (
+                <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3"><ArrowPathRoundedSquareIcon className="w-6 h-6 text-emerald-600" /><div><p className="font-bold text-emerald-900 text-sm">Distinguished Pivot</p><p className="text-xs text-emerald-700">Apply interventions to lesson plan.</p></div></div>
+                  <button onClick={handleRefinePlan} disabled={refining} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50">{refining ? 'Refining...' : 'Refine Plan'}</button>
+                </div>
+              )}
+              <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar shadow-2xl shadow-indigo-100/20"><MarkdownRenderer content={result} /></div>
             </div>
           )}
         </div>
