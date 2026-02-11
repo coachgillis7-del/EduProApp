@@ -12,7 +12,7 @@ import {
   ChartBarIcon,
   NoSymbolIcon,
   UserGroupIcon
-} from '@heroicons/react/24/outline';
+} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
 
 const ROSTER_KEY = 'edupro_student_roster';
 

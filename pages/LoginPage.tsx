@@ -5,7 +5,7 @@ import {
   AcademicCapIcon, 
   ArrowPathIcon,
   GlobeAltIcon
-} from '@heroicons/react/24/outline';
+} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;

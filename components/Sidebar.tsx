@@ -12,7 +12,7 @@ import {
   GlobeAltIcon,
   ArrowLeftOnRectangleIcon,
   ShieldCheckIcon
-} from '@heroicons/react/24/outline';
+} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
 
 interface SidebarProps {
   currentPage: Page;
