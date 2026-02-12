@@ -20,10 +20,14 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedSession = localStorage.getItem(AUTH_KEY);
     if (savedSession) {
-      const parsed = JSON.parse(savedSession) as User;
-      setUser(parsed);
-      // Auto-route Admins to Dashboard
-      if (parsed.role === 'ADMIN') setCurrentPage(Page.Admin);
+      try {
+        const parsed = JSON.parse(savedSession) as User;
+        setUser(parsed);
+        // Auto-route Admins to Dashboard
+        if (parsed.role === 'ADMIN') setCurrentPage(Page.Admin);
+      } catch {
+        localStorage.removeItem(AUTH_KEY);
+      }
     }
   }, []);
 
