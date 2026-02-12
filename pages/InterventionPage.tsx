@@ -22,7 +22,7 @@ import {
   ChevronRightIcon,
   BeakerIcon,
   ArrowPathIcon
-} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
+} from '@heroicons/react/24/outline';
 
 const InterventionPage: React.FC = () => {
   const [interventions, setInterventions] = useState<InterventionGroup[]>([]);

@@ -17,7 +17,7 @@ import {
   LightBulbIcon,
   ShieldCheckIcon,
   ExclamationTriangleIcon
-} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
+} from '@heroicons/react/24/outline';
 
 const InsightsPage: React.FC = () => {
   const [view, setView] = useState<'daily' | 'summative'>('daily');

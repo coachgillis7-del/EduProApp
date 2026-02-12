@@ -35,7 +35,7 @@ import {
   HandThumbUpIcon,
   EyeIcon,
   PencilSquareIcon
-} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
+} from '@heroicons/react/24/outline';
 
 const PlannerPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

@@ -20,7 +20,7 @@ import {
   ChatBubbleLeftRightIcon,
   LightBulbIcon,
   BoltIcon
-} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
+} from '@heroicons/react/24/outline';
 
 const AdminDashboard: React.FC = () => {
   const [selectedCampus, setSelectedCampus] = useState('All Campuses');

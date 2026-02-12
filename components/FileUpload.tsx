@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowUpTrayIcon, DocumentTextIcon } from 'https://esm.sh/@heroicons/react@2.2.0/24/solid';
+import { ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 
 interface FileUploadProps {
   onUpload: (base64: string, type: string) => void;

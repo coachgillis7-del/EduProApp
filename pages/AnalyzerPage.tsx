@@ -15,7 +15,7 @@ import {
   ClipboardIcon,
   ChatBubbleLeftRightIcon,
   LinkIcon
-} from 'https://esm.sh/@heroicons/react@2.2.0/24/outline';
+} from '@heroicons/react/24/outline';
 
 const AnalyzerPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
