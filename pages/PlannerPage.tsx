@@ -70,19 +70,23 @@ const PlannerPage: React.FC = () => {
   useEffect(() => {
     const saved = localStorage.getItem('edupro_auth_session');
     if (saved) {
-      const parsedUser = JSON.parse(saved) as User;
-      setUser(parsedUser);
-      setActiveSubject(parsedUser.subjects[0] || '');
-      
-      const classes = getUserClasses();
-      if (classes.length === 0 && parsedUser.classes.length > 0) {
-        saveUserClasses(parsedUser.classes);
-        setUserClasses(parsedUser.classes);
-      } else {
-        setUserClasses(classes);
-      }
+      try {
+        const parsedUser = JSON.parse(saved) as User;
+        setUser(parsedUser);
+        setActiveSubject(parsedUser.subjects[0] || '');
 
-      if (classes.length > 0) setSelectedClassId(classes[0].id);
+        const classes = getUserClasses();
+        if (classes.length === 0 && parsedUser.classes.length > 0) {
+          saveUserClasses(parsedUser.classes);
+          setUserClasses(parsedUser.classes);
+        } else {
+          setUserClasses(classes);
+        }
+
+        if (classes.length > 0) setSelectedClassId(classes[0].id);
+      } catch {
+        localStorage.removeItem('edupro_auth_session');
+      }
     }
   }, []);
 

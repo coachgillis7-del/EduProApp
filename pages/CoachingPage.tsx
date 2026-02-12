@@ -45,8 +45,13 @@ const CoachingPage: React.FC = () => {
     setAccommodations(getAccommodations());
     const savedRoster = localStorage.getItem(ROSTER_KEY);
     if (savedRoster) {
-      const names = JSON.parse(savedRoster) as string[];
-      setStudents(names.map(name => ({ name, score: 0 })));
+      try {
+        const names = JSON.parse(savedRoster) as string[];
+        setStudents(names.map(name => ({ name, score: 0 })));
+      } catch {
+        localStorage.removeItem(ROSTER_KEY);
+        setStudents([{ name: 'Student 1', score: 0 }]);
+      }
     } else {
       setStudents([{ name: 'Student 1', score: 0 }]);
     }

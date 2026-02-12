@@ -8,11 +8,23 @@ const ACCOMMODATIONS_KEY = 'edupro_accommodations';
 const INTERVENTIONS_KEY = 'edupro_interventions';
 const CLASSES_KEY = 'edupro_user_classes';
 
+const readStorageArray = <T>(key: string): T[] => {
+  const data = localStorage.getItem(key);
+  if (!data) return [];
+  try {
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    localStorage.removeItem(key);
+    return [];
+  }
+};
+
 export const getCampusData = (): TeacherSummary[] => {
   const teacher1History = getHistory().filter(h => h.type === 'coaching');
   const teacher1Avg = teacher1History.length ? teacher1History[0].metric : 82;
   const teacher1Planning = getHistory().filter(h => h.type === 'planning');
-  
+
   return [
     {
       id: 't1',
@@ -58,10 +70,7 @@ export const getCampusData = (): TeacherSummary[] => {
 };
 
 // CLASSES
-export const getUserClasses = (): ClassPeriod[] => {
-  const data = localStorage.getItem(CLASSES_KEY);
-  return data ? JSON.parse(data) : [];
-};
+export const getUserClasses = (): ClassPeriod[] => readStorageArray<ClassPeriod>(CLASSES_KEY);
 
 export const saveUserClasses = (classes: ClassPeriod[]) => {
   localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
@@ -79,10 +88,7 @@ export const saveHistoryEntry = (entry: Omit<HistoryEntry, 'id' | 'date'>) => {
   return newEntry;
 };
 
-export const getHistory = (): HistoryEntry[] => {
-  const data = localStorage.getItem(HISTORY_KEY);
-  return data ? JSON.parse(data) : [];
-};
+export const getHistory = (): HistoryEntry[] => readStorageArray<HistoryEntry>(HISTORY_KEY);
 
 export const clearHistory = () => {
   localStorage.removeItem(HISTORY_KEY);
@@ -90,8 +96,7 @@ export const clearHistory = () => {
 
 // INTERVENTIONS
 export const getInterventions = (classId?: string): InterventionGroup[] => {
-  const data = localStorage.getItem(INTERVENTIONS_KEY);
-  const list: InterventionGroup[] = data ? JSON.parse(data) : [];
+  const list = readStorageArray<InterventionGroup>(INTERVENTIONS_KEY);
   return classId ? list.filter(i => i.classId === classId) : list;
 };
 
@@ -125,8 +130,7 @@ export const saveLessonToBank = (lesson: Omit<StoredLesson, 'id' | 'datePlanned'
 };
 
 export const getLessonBank = (classId?: string): StoredLesson[] => {
-  const data = localStorage.getItem(LESSON_BANK_KEY);
-  const list: StoredLesson[] = data ? JSON.parse(data) : [];
+  const list = readStorageArray<StoredLesson>(LESSON_BANK_KEY);
   return classId ? list.filter(l => l.classId === classId) : list;
 };
 
@@ -155,7 +159,7 @@ export const saveAssessment = (assessment: Omit<Assessment, 'id' | 'date' | 'ave
     average: avg
   };
   localStorage.setItem(ASSESSMENT_KEY, JSON.stringify([newAssessment, ...assessments]));
-  
+
   saveHistoryEntry({
     type: 'assessment',
     metric: avg,
@@ -167,8 +171,7 @@ export const saveAssessment = (assessment: Omit<Assessment, 'id' | 'date' | 'ave
 };
 
 export const getAssessments = (classId?: string): Assessment[] => {
-  const data = localStorage.getItem(ASSESSMENT_KEY);
-  const list: Assessment[] = data ? JSON.parse(data) : [];
+  const list = readStorageArray<Assessment>(ASSESSMENT_KEY);
   return classId ? list.filter(a => a.classId === classId) : list;
 };
 
@@ -179,8 +182,7 @@ export const deleteAssessment = (id: string) => {
 
 // ACCOMMODATIONS (SPED/504)
 export const getAccommodations = (classId?: string): SpedAccommodation[] => {
-  const data = localStorage.getItem(ACCOMMODATIONS_KEY);
-  const list: SpedAccommodation[] = data ? JSON.parse(data) : [];
+  const list = readStorageArray<SpedAccommodation>(ACCOMMODATIONS_KEY);
   return classId ? list.filter(a => a.classId === classId) : list;
 };
 

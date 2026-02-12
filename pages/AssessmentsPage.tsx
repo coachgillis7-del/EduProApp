@@ -39,8 +39,12 @@ const AssessmentsPage: React.FC = () => {
     setAssessments(getAssessments());
     const savedRoster = localStorage.getItem(ROSTER_KEY);
     if (savedRoster) {
-      const names = JSON.parse(savedRoster) as string[];
-      setScores(names.map(name => ({ name, score: 0 })));
+      try {
+        const names = JSON.parse(savedRoster) as string[];
+        setScores(names.map(name => ({ name, score: 0 })));
+      } catch {
+        localStorage.removeItem(ROSTER_KEY);
+      }
     }
   }, []);
 
@@ -73,8 +77,13 @@ const AssessmentsPage: React.FC = () => {
     
     const savedRoster = localStorage.getItem(ROSTER_KEY);
     if (savedRoster) {
-      const names = JSON.parse(savedRoster) as string[];
-      setScores(names.map(name => ({ name, score: 0 })));
+      try {
+        const names = JSON.parse(savedRoster) as string[];
+        setScores(names.map(name => ({ name, score: 0 })));
+      } catch {
+        localStorage.removeItem(ROSTER_KEY);
+        setScores([]);
+      }
     }
   };
 
