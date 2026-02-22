@@ -10,22 +10,42 @@ import InsightsPage from './pages/InsightsPage';
 import InterventionPage from './pages/InterventionPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { Page, User } from './types';
+import { auth } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { getUserProfile } from './services/storageService';
 
 const AUTH_KEY = 'edupro_auth_session';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState<Page>(Page.Planner);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedSession = localStorage.getItem(AUTH_KEY);
-    if (savedSession) {
-      const parsed = JSON.parse(savedSession) as User;
-      setUser(parsed);
-      // Auto-route Admins to Dashboard
-      if (parsed.role === 'ADMIN') setCurrentPage(Page.Admin);
-    }
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in, fetch profile from Firestore
+        const profile = await getUserProfile(firebaseUser.uid);
+        if (profile) {
+          setUser(profile);
+          localStorage.setItem(AUTH_KEY, JSON.stringify(profile));
+          if (profile.role === 'ADMIN' && currentPage === Page.Planner) {
+            setCurrentPage(Page.Admin);
+          }
+        } else {
+          // Auth exists but no profile yet (should be handled by LoginPage)
+          setUser(null);
+        }
+      } else {
+        // User is signed out
+        setUser(null);
+        localStorage.removeItem(AUTH_KEY);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentPage]);
 
   const handleLogin = (newUser: User) => {
     setUser(newUser);
@@ -37,10 +57,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     setUser(null);
     localStorage.removeItem(AUTH_KEY);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium animate-pulse">Initializing EduPro...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;

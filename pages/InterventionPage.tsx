@@ -29,11 +29,21 @@ const InterventionPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [activeInterventionId, setActiveInterventionId] = useState<string | null>(null);
 
-  const assessments = useMemo(() => getAssessments(), []);
-  const history = useMemo(() => getHistory(), []);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    setInterventions(getInterventions());
+    const loadData = async () => {
+      const [loadedInterventions, loadedAssessments, loadedHistory] = await Promise.all([
+        getInterventions(),
+        getAssessments(),
+        getHistory()
+      ]);
+      setInterventions(loadedInterventions);
+      setAssessments(loadedAssessments);
+      setHistory(loadedHistory);
+    };
+    loadData();
   }, []);
 
   const handleGenerate = async () => {
@@ -47,8 +57,11 @@ const InterventionPage: React.FC = () => {
       }));
       
       // Merge with existing
-      newGroups.forEach(g => saveIntervention(g));
-      setInterventions(getInterventions());
+      for (const g of newGroups) {
+        await saveIntervention(g);
+      }
+      const updatedInterventions = await getInterventions();
+      setInterventions(updatedInterventions);
     } catch (e) {
       alert("Failed to generate groups.");
     } finally {
@@ -56,7 +69,7 @@ const InterventionPage: React.FC = () => {
     }
   };
 
-  const updateStatus = (id: string, status: 'suggested' | 'scheduled' | 'delivered') => {
+  const updateStatus = async (id: string, status: 'suggested' | 'scheduled' | 'delivered') => {
     const list = [...interventions];
     const index = list.findIndex(i => i.id === id);
     if (index !== -1) {
@@ -65,14 +78,15 @@ const InterventionPage: React.FC = () => {
       if (status === 'delivered') {
         list[index].deliveredDate = new Date().toISOString();
         // Track in history
-        saveHistoryEntry({
+        await saveHistoryEntry({
           type: 'intervention',
           metric: 100,
           label: `Intervention Delivered: ${list[index].skill}`
         });
       }
-      saveIntervention(list[index]);
-      setInterventions(list);
+      await saveIntervention(list[index]);
+      const updatedInterventions = await getInterventions();
+      setInterventions(updatedInterventions);
     }
   };
 
@@ -107,7 +121,7 @@ const InterventionPage: React.FC = () => {
             <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 transition-all group">
               <div className="flex justify-between items-start mb-3">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.tier === 3 ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>Tier {item.tier}</span>
-                <button onClick={() => { deleteIntervention(item.id); setInterventions(getInterventions()); }} className="text-slate-300 hover:text-red-500 transition-colors"><TrashIcon className="w-4 h-4" /></button>
+                <button onClick={async () => { await deleteIntervention(item.id); const updated = await getInterventions(); setInterventions(updated); }} className="text-slate-300 hover:text-red-500 transition-colors"><TrashIcon className="w-4 h-4" /></button>
               </div>
               <h4 className="font-bold text-slate-900 mb-2">{item.skill}</h4>
               <div className="flex flex-wrap gap-1 mb-4">

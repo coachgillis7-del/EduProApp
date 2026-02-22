@@ -31,25 +31,30 @@ const AssessmentsPage: React.FC = () => {
   const [behaviorNotes, setBehaviorNotes] = useState('');
 
   useEffect(() => {
-    // Load available classes for selection
-    const classes = getUserClasses();
-    setUserClasses(classes);
-    if (classes.length > 0) setSelectedClassId(classes[0].id);
+    const loadData = async () => {
+      // Load available classes for selection
+      const classes = await getUserClasses();
+      setUserClasses(classes);
+      if (classes.length > 0) setSelectedClassId(classes[0].id);
 
-    setAssessments(getAssessments());
-    const savedRoster = localStorage.getItem(ROSTER_KEY);
-    if (savedRoster) {
-      const names = JSON.parse(savedRoster) as string[];
-      setScores(names.map(name => ({ name, score: 0 })));
-    }
+      const loadedAssessments = await getAssessments();
+      setAssessments(loadedAssessments);
+      
+      const savedRoster = localStorage.getItem(ROSTER_KEY);
+      if (savedRoster) {
+        const names = JSON.parse(savedRoster) as string[];
+        setScores(names.map(name => ({ name, score: 0 })));
+      }
+    };
+    loadData();
   }, []);
 
   // Fix: Added classId to handleSave to satisfy type requirements
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim()) return alert("Assessment title required.");
     if (!selectedClassId) return alert("Please select a class period.");
 
-    saveAssessment({
+    await saveAssessment({
       classId: selectedClassId,
       title,
       subject,
@@ -58,7 +63,8 @@ const AssessmentsPage: React.FC = () => {
       reflection,
       behaviorNotes
     });
-    setAssessments(getAssessments());
+    const updatedAssessments = await getAssessments();
+    setAssessments(updatedAssessments);
     setIsAdding(false);
     resetForm();
   };
@@ -78,10 +84,11 @@ const AssessmentsPage: React.FC = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if(confirm("Permanently delete this assessment record?")) {
-      deleteAssessment(id);
-      setAssessments(getAssessments());
+      await deleteAssessment(id);
+      const updatedAssessments = await getAssessments();
+      setAssessments(updatedAssessments);
     }
   };
 

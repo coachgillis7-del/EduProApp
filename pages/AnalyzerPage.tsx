@@ -26,12 +26,16 @@ const AnalyzerPage: React.FC = () => {
   const [selectedLessonId, setSelectedLessonId] = useState<string>('');
 
   useEffect(() => {
-    setLessonBank(getLessonBank());
+    const loadBank = async () => {
+      const bank = await getLessonBank();
+      setLessonBank(bank);
+    };
+    loadBank();
   }, []);
 
   const getSelectedLesson = () => lessonBank.find(l => l.id === selectedLessonId);
 
-  const trackResult = (content: string) => {
+  const trackResult = async (content: string) => {
     const lesson = getSelectedLesson();
     const label = `Session: ${lesson ? lesson.focus : new Date().toLocaleDateString()}`;
     
@@ -40,7 +44,7 @@ const AnalyzerPage: React.FC = () => {
     const pacingMatch = content.match(/PACING SCORE:\s*(\d+)/i);
 
     if (discourseMatch) {
-      saveHistoryEntry({
+      await saveHistoryEntry({
         type: 'execution',
         metric: parseInt(discourseMatch[1]),
         label: `${label} (Discourse)`,
@@ -48,7 +52,7 @@ const AnalyzerPage: React.FC = () => {
       });
     }
     if (alignmentMatch) {
-      saveHistoryEntry({
+      await saveHistoryEntry({
         type: 'alignment',
         metric: parseInt(alignmentMatch[1]),
         label: `${label} (Alignment)`,
@@ -56,7 +60,7 @@ const AnalyzerPage: React.FC = () => {
       });
     }
     if (pacingMatch) {
-      saveHistoryEntry({
+      await saveHistoryEntry({
         type: 'pacing',
         metric: parseInt(pacingMatch[1]),
         label: `${label} (Pacing)`,
@@ -72,7 +76,7 @@ const AnalyzerPage: React.FC = () => {
       const plannedLesson = getSelectedLesson();
       const aiResult = await analyzeLessonExecution(base64, type, plannedLesson?.content);
       setResult(aiResult || "No feedback generated.");
-      if (aiResult) trackResult(aiResult);
+      if (aiResult) await trackResult(aiResult);
     } catch (error) {
       console.error(error);
       alert("Failed to analyze the media.");
@@ -92,7 +96,7 @@ const AnalyzerPage: React.FC = () => {
       const plannedLesson = getSelectedLesson();
       const aiResult = await analyzeLessonTranscript(transcriptText, plannedLesson?.content);
       setResult(aiResult || "No feedback generated.");
-      if (aiResult) trackResult(aiResult);
+      if (aiResult) await trackResult(aiResult);
     } catch (error) {
       console.error(error);
       alert("Failed to analyze the transcript.");

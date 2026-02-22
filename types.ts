@@ -19,6 +19,7 @@ export interface ClassPeriod {
 }
 
 export interface User {
+  uid: string;
   name: string;
   role: UserRole;
   grade?: string;

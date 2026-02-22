@@ -23,9 +23,17 @@ const InsightsPage: React.FC = () => {
   const [view, setView] = useState<'daily' | 'summative'>('daily');
   const [prediction, setPrediction] = useState<any>(null);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
 
-  const history = useMemo(() => getHistory(), []);
-  const assessments = useMemo(() => getAssessments(), []);
+  useEffect(() => {
+    const loadData = async () => {
+      const [h, a] = await Promise.all([getHistory(), getAssessments()]);
+      setHistory(h);
+      setAssessments(a);
+    };
+    loadData();
+  }, []);
 
   const stats = useMemo(() => {
     const coachingEntries = history.filter(h => h.type === 'coaching');
@@ -91,9 +99,9 @@ const InsightsPage: React.FC = () => {
     );
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
     if (confirm("Reset all growth tracking data? This cannot be undone.")) {
-      clearHistory();
+      await clearHistory();
       window.location.reload();
     }
   };

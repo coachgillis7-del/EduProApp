@@ -40,16 +40,25 @@ const CoachingPage: React.FC = () => {
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
   
   useEffect(() => {
-    setLessonBank(getLessonBank());
-    setAssessments(getAssessments());
-    setAccommodations(getAccommodations());
-    const savedRoster = localStorage.getItem(ROSTER_KEY);
-    if (savedRoster) {
-      const names = JSON.parse(savedRoster) as string[];
-      setStudents(names.map(name => ({ name, score: 0 })));
-    } else {
-      setStudents([{ name: 'Student 1', score: 0 }]);
-    }
+    const loadData = async () => {
+      const [bank, asms, accs] = await Promise.all([
+        getLessonBank(),
+        getAssessments(),
+        getAccommodations()
+      ]);
+      setLessonBank(bank);
+      setAssessments(asms);
+      setAccommodations(accs);
+      
+      const savedRoster = localStorage.getItem(ROSTER_KEY);
+      if (savedRoster) {
+        const names = JSON.parse(savedRoster) as string[];
+        setStudents(names.map(name => ({ name, score: 0 })));
+      } else {
+        setStudents([{ name: 'Student 1', score: 0 }]);
+      }
+    };
+    loadData();
   }, []);
 
   const handleImportAssessment = () => {
@@ -72,7 +81,7 @@ const CoachingPage: React.FC = () => {
       const coachingAdvice = await provideCoaching(students, reflection, evidence?.base64, evidence?.type, behaviorNotes, accContext);
       setResult(coachingAdvice || "No advice found.");
       const avg = students.reduce((acc, curr) => acc + curr.score, 0) / (students.length || 1);
-      saveHistoryEntry({ type: 'coaching', metric: avg, label: `Growth Review: ${new Date().toLocaleDateString()}`, details: behaviorNotes });
+      await saveHistoryEntry({ type: 'coaching', metric: avg, label: `Growth Review: ${new Date().toLocaleDateString()}`, details: behaviorNotes });
     } catch (error) { alert("Failed to get coaching."); } finally { setLoading(false); }
   };
 
@@ -83,7 +92,7 @@ const CoachingPage: React.FC = () => {
     setRefining(true);
     try {
       const refinedContent = await refineLessonWithCoaching(lesson.content, result);
-      updateLessonInBank(selectedLessonId, { content: refinedContent, status: 'revised' });
+      await updateLessonInBank(selectedLessonId, { content: refinedContent, status: 'revised' });
       alert("Lesson Plan Revised with Behavioral Success Pathway!");
     } catch (error) { alert("Refinement failed."); } finally { setRefining(false); }
   };
